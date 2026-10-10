@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://zero-kobo.github.io/kids-drill/sitemap.xml
