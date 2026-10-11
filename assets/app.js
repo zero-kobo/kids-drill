@@ -18,7 +18,6 @@
     v.stars = v.stars || {};
     if (v.sound === undefined) v.sound = true;
     v.daily = v.daily || { d: '', n: 0 };
-    v.pick = v.pick || {};
     return v;
   })();
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* 保存できなくても遊べる */ } };
@@ -72,6 +71,12 @@
   const toneHTML = (n, html, cls) => { const m = document.getElementById(n); if (m) { m.innerHTML = html; m.className = 'msg ' + (cls || ''); } };
   const conv = (s) => (W && W.script === 'kata' ? KD.toKata(s) : s);
   const scriptName = () => (W && W.script === 'kata' ? 'カタカナ' : 'ひらがな');
+  /* ステップ：文字表の1行ずつ。★2つ（8問以上）でクリア扱いにして、「つぎは ここ」を出す */
+  const STEPS = isMath ? [] : KD.steps(conv);
+  const stepKey = (i) => C.key + 's' + i;
+  const stepStars = (i) => S.stars[stepKey(i)] || 0;
+  const earlier = (i) => [].concat.apply([], STEPS.slice(0, i).map((st) => st.chars));
+  const recommended = () => { for (let i = 0; i < STEPS.length; i++) if (stepStars(i) < 2) return i; return -1; };
   function dotsBar() {
     let h = '<ol class="prog" aria-label="しんちょく">';
     for (let i = 0; i < 10; i++) h += '<li class="' + (i < G.idx ? (G.res[i] ? 'ok' : 'ng') : i === G.idx ? 'now' : '') + '"></li>';
@@ -89,10 +94,16 @@
     let got = 0; C.levels.forEach((_, i) => { got += starsOf(i); });
     let h = '';
     if (!isMath) {
-      h += '<p class="pick">はじめかたを えらんでね</p>' +
-        '<button type="button" class="pick-card" data-act="pickmenu"><span class="pk-big" lang="ja">' + conv('あ') + '</span>' +
-        '<span><b>もじを えらんで れんしゅう</b><small>1もじだけでも できるよ</small></span></button>' +
-        '<p class="pick">ことばを よめる ひとは こちら<span class="total">★ ' + got + ' / ' + total + '</span></p>';
+      const rec = recommended();
+      h += '<p class="pick">ステップで おぼえよう</p><p class="pick-lead">1ぎょう（5もじまで）ずつ すすめるよ。</p><div class="steps-grid">';
+      STEPS.forEach((st, i) => {
+        if (i > 0 && st.group !== STEPS[i - 1].group) h += '</div><p class="pick">てんてん・まるの もじ</p><div class="steps-grid">';
+        h += '<button type="button" class="step' + (i === rec ? ' rec' : '') + '" data-act="steplearn" data-i="' + i + '">' +
+          (i === rec ? '<span class="rec-tag">つぎは ここ</span>' : '') +
+          '<b lang="ja">' + st.name + '</b><span class="st-ch" lang="ja">' + st.chars.join('') + '</span>' +
+          '<span class="lv-stars" aria-label="ほし ' + stepStars(i) + 'こ">' + starsStr(stepStars(i)) + '</span></button>';
+      });
+      h += '</div><p class="pick">ことばを よめる ひとは こちら<span class="total">★ ' + got + ' / ' + total + '</span></p>';
     } else {
       h += '<p class="pick">レベルを えらんでね<span class="total">★ ' + got + ' / ' + total + '</span></p>';
     }
@@ -230,45 +241,25 @@
     }
   }
 
-  /* ---------- もじを えらんで れんしゅう（1もじからOK） ---------- */
-  const PICKTABS = ['seion', 'dakuon'];
-  const PICKCHARS = {};
-  PICKTABS.forEach((k) => { PICKCHARS[k] = [].concat.apply([], KD.CHARTS[k].rows).filter(Boolean).map(conv); });
-  const ALLPICK = PICKCHARS.seion.concat(PICKCHARS.dakuon);
-  const sel = new Set(((S.pick[kind]) || []).filter((c) => ALLPICK.indexOf(c) >= 0));
-  function paintSel() {
-    const cnt = document.getElementById('selcnt'); if (cnt) cnt.textContent = sel.size + ' もじ えらんだ';
-    const st = document.getElementById('pstart'); if (st) st.disabled = sel.size === 0;
-  }
-  function pickMenu(tab) {
-    tab = tab || (G && G.tab) || 'seion';
-    G = { playing: false, tab: tab };
-    let h = '<div class="bar"><button type="button" class="back" data-act="menu">もどる</button><span class="lvl">もじを えらぶ</span><span class="cnt" id="selcnt"></span></div>' +
-      '<p class="pick-lead">れんしゅうしたい もじを おして えらぼう。<b>1つだけでも だいじょうぶ。</b></p><div class="ctabs" role="tablist">';
-    PICKTABS.forEach((k) => {
-      h += '<button type="button" role="tab" aria-selected="' + (k === tab) + '" class="' + (k === tab ? 'on' : '') + '" data-act="ptab" data-t="' + k + '">' + KD.CHARTS[k].name + '</button>';
+  /* ---------- ステップ（あ行から1行ずつ：おぼえる → れんしゅう） ---------- */
+  function stepLearn(i) {
+    const st = STEPS[i];
+    G = { playing: false, step: i };
+    let cards = '';
+    st.chars.forEach((c) => {
+      const ex = KD.examples(C.words, c, 1)[0];
+      cards += '<div class="lc"><span class="lc-ch" lang="ja">' + c + '</span>' +
+        (ex ? '<span class="lc-w"><span class="lc-e">' + ex.e + '</span><span lang="ja"><span class="hl">' + c + '</span>' + esc(ex.w.slice(c.length)) + '</span></span>'
+            : '<span class="lc-w lc-none">えは まだ ないよ</span>') + '</div>';
     });
-    h += '</div><div class="chart cols' + KD.CHARTS[tab].cols + '">';
-    KD.CHARTS[tab].rows.forEach((r) => r.forEach((c0) => {
-      const c = conv(c0);
-      h += c0 ? '<button type="button" class="ch pk' + (sel.has(c) ? ' on' : '') + '" lang="ja" aria-pressed="' + sel.has(c) + '" data-act="ptoggle" data-c="' + c + '">' + c + '</button>' : '<span class="ch blank"></span>';
-    }));
-    h += '</div><div class="picker-actions"><button type="button" class="btn go" id="pstart" data-act="pstart">えらんだ もじで はじめる</button>' +
-      '<button type="button" class="btn sub" data-act="pclear">ぜんぶ はずす</button></div>' +
-      '<p class="chart-note">よみかたは、おうちのかたが こえに だして おしえてあげてね。</p>';
-    V.innerHTML = h;
-    paintSel();
+    V.innerHTML = '<div class="bar"><button type="button" class="back" data-act="menu">もどる</button><span class="lvl">' + st.name + '</span><span class="cnt">おぼえよう</span></div>' +
+      '<p class="pick-lead">もじを みてみよう。よみかたは、おうちのかたが こえに だして おしえてあげてね。</p>' +
+      '<div class="learn">' + cards + '</div>' +
+      '<div class="actions"><button type="button" class="btn go" data-act="stepgo" data-i="' + i + '">れんしゅうを はじめる</button></div>';
   }
-  function pickToggle(b) {
-    const c = b.dataset.c;
-    if (sel.has(c)) { sel.delete(c); b.classList.remove('on'); b.setAttribute('aria-pressed', 'false'); }
-    else { sel.add(c); b.classList.add('on'); b.setAttribute('aria-pressed', 'true'); }
-    paintSel();
-  }
-  function pickStart() {
-    if (!sel.size) return;
-    S.pick[kind] = Array.from(sel); save();
-    G = { playing: true, mode: 'pick', tab: G.tab || 'seion', qs: KD.pickQs(C.words, Array.from(sel), ALLPICK, 10), idx: 0, score: 0, misses: 0, locked: false, res: [] };
+  function stepStart(i) {
+    const st = STEPS[i], before = earlier(i);
+    G = { playing: true, mode: 'pick', step: i, qs: KD.stepQs(C.words, st.chars, before, st.chars.concat(before), 10), idx: 0, score: 0, misses: 0, locked: false, res: [] };
     pickQ();
   }
   function pickQ() {
@@ -281,7 +272,7 @@
       ask = '「' + q.c + '」から はじまる ことばは どれかな？';
       q.choices.forEach((c, i) => { ch += '<button type="button" class="choice" id="c' + i + '" data-act="ppick" data-i="' + i + '">' + c.e + '</button>'; });
     }
-    V.innerHTML = '<div class="bar"><button type="button" class="back" data-act="pickmenu">もどる</button><span class="lvl">もじの れんしゅう</span><span class="cnt">' + (G.idx + 1) + ' / 10</span></div>' +
+    V.innerHTML = '<div class="bar"><button type="button" class="back" data-act="menu">もどる</button><span class="lvl">' + STEPS[G.step].name + ' の れんしゅう</span><span class="cnt">' + (G.idx + 1) + ' / 10</span></div>' +
       dotsBar() +
       '<div class="note pick-note" id="qcard"><p class="ask">' + ask + '</p><div class="bigc" lang="ja">' + q.c + '</div>' +
       '<p class="msg" id="kmsg" role="status"></p></div><div class="choices">' + ch + '</div>';
@@ -304,11 +295,15 @@
   }
   function pickResult() {
     const n = calcStars(G.score);
-    const text = n === 3 ? 'ぜんぶ よくできました！' : n === 2 ? 'よくできました！' : 'いいちょうし。もういちど あそんでみよう。';
-    V.innerHTML = '<div class="result">' + mark(n) + '<h3>' + G.score + ' / 10 もん せいかい</h3><p>' + text + '</p>' +
-      '<div class="actions"><button type="button" class="btn go" data-act="pickagain">もういちど</button>' +
-      '<button type="button" class="btn sub" data-act="pickmenu">もじを えらびなおす</button>' +
-      '<button type="button" class="btn sub" data-act="menu">はじめに もどる</button></div></div>';
+    if (n > stepStars(G.step)) { S.stars[stepKey(G.step)] = n; save(); }
+    const hasNext = G.score >= 8 && G.step < STEPS.length - 1;
+    const text = n === 3 ? 'ぜんぶ よくできました！' : n === 2 ? 'よくできました！つぎも いけそう。' : n === 1 ? 'いいちょうし。もういちど やってみよう。' : 'だいじょうぶ。もういちど おぼえてから やってみよう。';
+    V.innerHTML = '<div class="result">' + mark(n) + '<h3>' + G.score + ' / 10 もん せいかい</h3>' +
+      '<p class="rstars" aria-label="ほし ' + n + 'こ">' + starsStr(n) + '</p><p>' + text + '</p><div class="actions">' +
+      (hasNext ? '<button type="button" class="btn go" data-act="steplearn" data-i="' + (G.step + 1) + '">つぎの ステップへ（' + STEPS[G.step + 1].name + '）</button>' : '') +
+      '<button type="button" class="btn" data-act="stepgo" data-i="' + G.step + '">もういちど</button>' +
+      '<button type="button" class="btn sub" data-act="steplearn" data-i="' + G.step + '">もういちど おぼえる</button>' +
+      '<button type="button" class="btn sub" data-act="menu">ステップを えらぶ</button></div></div>';
     beep(n >= 2 ? [660, 880, 1100, 1320] : [660, 880]);
     G.playing = false;
   }
@@ -390,11 +385,8 @@
     else if (act === 'ctab') chartView(b.dataset.t);
     else if (act === 'cprint') printChart();
     else if (act === 'chshow') chShow(b);
-    else if (act === 'pickmenu') pickMenu();
-    else if (act === 'ptab') pickMenu(b.dataset.t);
-    else if (act === 'ptoggle') pickToggle(b);
-    else if (act === 'pclear') { sel.clear(); pickMenu(G.tab); }
-    else if (act === 'pstart' || act === 'pickagain') pickStart();
+    else if (act === 'steplearn') stepLearn(i);
+    else if (act === 'stepgo') stepStart(i);
     else if (act === 'ppick') pickPick(i);
   });
   document.getElementById('snd').addEventListener('click', () => {

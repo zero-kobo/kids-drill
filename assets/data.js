@@ -120,7 +120,12 @@ var KD = (function () {
     // 5もじいじょう
     { w: 'ハンバーガー', e: '🍔' }, { w: 'サンドイッチ', e: '🥪' }, { w: 'チョコレート', e: '🍫' }, { w: 'ホットドッグ', e: '🌭' },
     { w: 'ヘリコプター', e: '🚁' }, { w: 'パイナップル', e: '🍍' }, { w: 'スパゲッティ', e: '🍝' }, { w: 'キャンディ', e: '🍬' },
-    { w: 'ポップコーン', e: '🍿' }, { w: 'バイオリン', e: '🎻' }, { w: 'トランペット', e: '🎺' }, { w: 'ブロッコリー', e: '🥦' }
+    { w: 'ポップコーン', e: '🍿' }, { w: 'バイオリン', e: '🎻' }, { w: 'トランペット', e: '🎺' }, { w: 'ブロッコリー', e: '🥦' },
+    // 頭文字そろえ用
+    { w: 'オムレツ', e: '🍳' }, { w: 'ナイフ', e: '🔪' }, { w: 'ネクタイ', e: '👔' }, { w: 'ノート', e: '📓' }, { w: 'フォーク', e: '🍴' },
+    { w: 'ヘルメット', e: '⛑️' }, { w: 'マスク', e: '😷' }, { w: 'ヨット', e: '⛵' }, { w: 'リボン', e: '🎀' }, { w: 'ロボット', e: '🤖' },
+    { w: 'シャツ', e: '👕' }, { w: 'セーター', e: '🧥' }, { w: 'ソファ', e: '🛋️' }, { w: 'ツリー', e: '🎄' }, { w: 'ダンス', e: '💃' },
+    { w: 'ビル', e: '🏢' }, { w: 'ボート', e: '🚤' }, { w: 'ヒーロー', e: '🦸' }, { w: 'デパート', e: '🏬' }
   ];
   const WORD = {
     kana: {
@@ -159,34 +164,51 @@ var KD = (function () {
     return qs;
   }
 
-  /* ---------- もじ練習（1もじからOK） ---------- */
+  /* ---------- ステップ練習（あ行から1行ずつ） ---------- */
   const SMALL = 'ゃゅょャュョ';
   // ことばの最初の「音」。ちょ・きゃ のような拗音は2文字で1つにする
   const firstUnit = (w) => (w.length > 1 && SMALL.indexOf(w[1]) >= 0 ? w.slice(0, 2) : w[0]);
   function examples(words, c, n) {
     return shuffle(words.filter((w) => firstUnit(w.w) === c)).slice(0, n);
   }
-  // chars: えらんだもじ（wordsと同じ文字種）, pool: ひっかけに使う全もじ
-  // 奇数番目は「その文字ではじまることば」(あれば)、それ以外は「同じ文字さがし」
-  function pickQs(words, chars, pool, n) {
+  // ステップ一覧：文字表の1行（5文字まで）が1ステップ。conv で文字の種類（ひらがな/カタカナ）を変える
+  function steps(conv) {
+    const out = [];
+    ['seion', 'dakuon'].forEach((g) => {
+      CHARTS[g].rows.forEach((r) => {
+        const chars = r.filter(Boolean).map(conv);
+        out.push({ group: g, name: chars[0] + '行', chars: chars });
+      });
+    });
+    return out;
+  }
+  // rowChars: このステップの文字 / reviewChars: 前のステップまでの文字（ふくしゅう用に2問ぶん混ぜる）
+  // pool: ひっかけに使う文字。奇数番目の問題は、ことばがある文字なら「その文字ではじまることば」を出す
+  function stepQs(words, rowChars, reviewChars, pool, n) {
     const m = {};
     words.forEach((w) => { const u = firstUnit(w.w); (m[u] = m[u] || []).push(w); });
+    const rev = Math.min(reviewChars.length, Math.floor(n / 5));
+    const targets = [];
     let bag = [];
-    const next = () => { if (!bag.length) bag = shuffle(chars); return bag.pop(); };
-    const qs = [];
-    for (let i = 0; i < n; i++) {
-      const c = next();
+    while (targets.length < n - rev) { if (!bag.length) bag = shuffle(rowChars); targets.push(bag.pop()); }
+    shuffle(reviewChars).slice(0, rev).forEach((c) => targets.push(c));
+    const order = shuffle(targets);
+    for (let i = 1; i < order.length; i++) {          // 同じ文字が続かないように入れかえる
+      if (order[i] === order[i - 1]) {
+        const j = order.findIndex((x, k) => k > i && x !== order[i]);
+        if (j > 0) { const t = order[i]; order[i] = order[j]; order[j] = t; }
+      }
+    }
+    return order.map((c, i) => {
       const cand = m[c] || [];
       if (i % 2 === 1 && cand.length) {
         const w = cand[rnd(0, cand.length - 1)];
         const ds = shuffle(words.filter((d) => firstUnit(d.w) !== c && d.e !== w.e)).slice(0, 3);
-        qs.push({ type: 'B', c, w: w.w, e: w.e, choices: shuffle([w].concat(ds)) });
-      } else {
-        const ds = shuffle(pool.filter((x) => x !== c)).slice(0, 3);
-        qs.push({ type: 'A', c, choices: shuffle([c].concat(ds)) });
+        return { type: 'B', c: c, w: w.w, e: w.e, choices: shuffle([w].concat(ds)) };
       }
-    }
-    return qs;
+      const ds = shuffle(pool.filter((x) => x !== c)).slice(0, 3);
+      return { type: 'A', c: c, choices: shuffle([c].concat(ds)) };
+    });
   }
 
   /* ---------- 文字表 ---------- */
@@ -204,6 +226,6 @@ var KD = (function () {
   };
   const toKata = (s) => s.replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60));
 
-  return { rnd, shuffle, MATH, WORD, WORDS_H, WORDS_K, CHARTS, toKata, wordQs, mathQs, firstUnit, examples, pickQs };
+  return { rnd, shuffle, MATH, WORD, WORDS_H, WORDS_K, CHARTS, toKata, wordQs, mathQs, firstUnit, examples, stepQs, steps };
 })();
 if (typeof module !== 'undefined') module.exports = KD;
