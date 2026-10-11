@@ -13,7 +13,7 @@ UPDATED = "2026-10-10"
 # 決まったら例のように入れて、python3 build.py を実行してください。
 # 例：'<a href="https://note.com/…" target="_blank" rel="noopener noreferrer">noteの記事のコメント欄</a>へお願いします。個人情報は書かないでください。'
 CONTACT_HTML = ""
-VER = "20261011c"
+VER = "20261011d"
 # =======================
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -60,18 +60,24 @@ def make_og():
         d.line([(0, y), (W, y)], fill="#d3e8de", width=2)
     d.rectangle([60, 60, W - 60, H - 60], fill="#ffffff", outline="#1d2b3a", width=6)
     d.rectangle([66, 66, W - 54, H - 54], outline="#1d2b3a", width=0)
-    f1 = ImageFont.truetype(fp, 92, index=0)
-    f2 = ImageFont.truetype(fp, 44, index=0)
-    f3 = ImageFont.truetype(fp, 112, index=0)
-    d.text((110, 100), SITE_NAME, font=f1, fill="#1d2b3a")
-    d.rectangle([110, 212, 700, 224], fill="#ffd23f")
-    d.text((110, 250), "たしざん・ひきざん・ひらがな・カタカナ", font=f2, fill="#53616f")
-    d.text((110, 316), "無料・登録なし・プリントつき", font=f2, fill="#53616f")
+    # note等のカードは中央の正方形だけを使うので、文字は中央の約600pxに収める
+    f1 = ImageFont.truetype(fp, 64, index=0)
+    f2 = ImageFont.truetype(fp, 30, index=0)
+    f3 = ImageFont.truetype(fp, 104, index=0)
+    cx = W // 2
+    d.text((cx, 112), SITE_NAME, font=f1, fill="#1d2b3a", anchor="ma")
+    nw = d.textlength(SITE_NAME, font=f1)
+    d.rectangle([cx - nw / 2, 192, cx + nw / 2, 202], fill="#ffd23f")
+    d.text((cx, 236), "たしざん・ひきざん", font=f2, fill="#53616f", anchor="ma")
+    d.text((cx, 278), "ひらがな・カタカナ", font=f2, fill="#53616f", anchor="ma")
+    d.text((cx, 330), "無料・登録なし・プリントつき", font=f2, fill="#53616f", anchor="ma")
     xs = [("3＋4", "#2f6fb5"), ("ひ", "#1a7c52"), ("ア", "#6a4cc0")]
-    x = 110
+    gap = 44
+    total = sum(d.textlength(t, font=f3) for t, _ in xs) + gap * (len(xs) - 1)
+    x = cx - total / 2
     for t, c in xs:
         d.text((x, 420), t, font=f3, fill=c)
-        x += d.textlength(t, font=f3) + 50
+        x += d.textlength(t, font=f3) + gap
     img.save(os.path.join(SITE, "assets", "og.png"), optimize=True)
     return True
 
@@ -83,8 +89,8 @@ def head(file, title, desc, extra_ld):
     url = url_of(file)
     og = ""
     if HAS_OG:
-        og = ('<meta property="og:image" content="%sassets/og.png"><meta property="og:image:width" content="1200">'
-              '<meta property="og:image:height" content="630"><meta name="twitter:image" content="%sassets/og.png">' % (BASE_URL, BASE_URL))
+        og = ('<meta property="og:image" content="%sassets/og.png?v=%s"><meta property="og:image:width" content="1200">'
+              '<meta property="og:image:height" content="630"><meta name="twitter:image" content="%sassets/og.png?v=%s">' % (BASE_URL, VER, BASE_URL, VER))
     ld = "\n".join('<script type="application/ld+json">%s</script>' % json.dumps(x, ensure_ascii=False) for x in extra_ld)
     return f"""<!DOCTYPE html>
 <html lang="ja">
