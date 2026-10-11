@@ -306,3 +306,10 @@ button{font-family:inherit;font-weight:700;color:inherit;cursor:pointer;-webkit-
 .lc-w{display:flex;flex-direction:column;align-items:center;font-family:var(--ff-kyo);font-weight:600;font-size:1.15rem;line-height:1.3}
 .lc-e{font-size:2rem;line-height:1.2}
 .lc-none{font-family:var(--ff);font-weight:500;font-size:.78rem;color:var(--sub)}
+
+/* 楽天の商品リンク枠 */
+.ad-lead{margin:0 0 8px;font-size:.9rem;color:var(--sub);line-height:1.6}
+.rk-list{display:flex;flex-wrap:wrap;gap:10px 14px}
+.rk-list table{max-width:100%}
+.rk-list br{display:none}
+.rk-list p:empty{display:none}
