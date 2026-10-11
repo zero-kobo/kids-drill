@@ -14,6 +14,8 @@ UPDATED = "2026-10-10"
 # 例：'<a href="https://note.com/…" target="_blank" rel="noopener noreferrer">noteの記事のコメント欄</a>へお願いします。個人情報は書かないでください。'
 CONTACT_HTML = ""
 VER = "20261011d"
+# Googleアナリティクス(GA4)の測定ID。空にすると、タグは出力されません。
+GA_ID = "G-40QSGNSQEL"
 # =======================
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -92,6 +94,11 @@ def head(file, title, desc, extra_ld):
         og = ('<meta property="og:image" content="%sassets/og.png?v=%s"><meta property="og:image:width" content="1200">'
               '<meta property="og:image:height" content="630"><meta name="twitter:image" content="%sassets/og.png?v=%s">' % (BASE_URL, VER, BASE_URL, VER))
     ld = "\n".join('<script type="application/ld+json">%s</script>' % json.dumps(x, ensure_ascii=False) for x in extra_ld)
+    if GA_ID:
+        ld += ('\n<!-- Google tag (GA4) -->\n'
+               '<script async src="https://www.googletagmanager.com/gtag/js?id=%s"></script>\n'
+               '<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}'
+               'gtag("js",new Date());gtag("config","%s");</script>' % (GA_ID, GA_ID))
     return f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -603,7 +610,8 @@ privacy = f"""<h1>プライバシーポリシー・広告について</h1>
 <p>当サイトは、楽天アフィリエイトなどのアフィリエイトプログラムを利用して、商品やサービスを紹介しています。広告のリンクから商品を購入・申込みされた場合、当サイトの運営者に報酬が支払われることがあります。広告には「PR」と表示し、広告であることが分かるようにしています。</p>
 <p>広告配信事業者や、アフィリエイトサービスの提供事業者が、広告の表示や成果の確認のために、Cookie などを利用する場合があります。Cookie の利用は、ブラウザの設定で無効にできます。詳しくは、各事業者のプライバシーポリシーをご確認ください。</p>
 <h2>アクセス解析について</h2>
-<p>当サイトでは、サイトの改善のために、第三者のアクセス解析サービスを利用する場合があります。これらは、個人を特定しない形でトラフィックデータを収集します。</p>
+<p>当サイトでは、サイトの改善のために、Google社のアクセス解析サービス「Google アナリティクス」を利用しています。Google アナリティクスは、Cookie などを使って、閲覧されたページや利用環境などのデータを、個人を特定しない形で収集します。収集されたデータは、Google社のプライバシーポリシーに基づいて管理されます。</p>
+<p>Cookie の利用は、ブラウザの設定で無効にできます。また、<a href="https://tools.google.com/dlpage/gaoptout?hl=ja" target="_blank" rel="noopener noreferrer">Google アナリティクス オプトアウト アドオン</a>で、データの収集を無効にすることもできます。詳しくは、<a href="https://policies.google.com/technologies/partner-sites?hl=ja" target="_blank" rel="noopener noreferrer">Google のポリシー</a>をご確認ください。</p>
 <h2>免責事項</h2>
 <p>当サイトの内容は、できる限り正確になるよう努めていますが、正確性や有用性を保証するものではありません。当サイトの利用によって生じた損害について、責任を負いかねます。広告で紹介する商品・サービスの内容や料金は、各公式サイトでご確認ください。</p>
 <h2>著作権・プリントの利用について</h2>
