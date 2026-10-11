@@ -1,4 +1,4 @@
-/* こどもドリルらんど：ドリルのUIと進行 */
+/* こどもドリルらんど：ドリルのUIと進行（音声の読み上げは使いません。効果音だけです） */
 (function () {
   'use strict';
   const root = document.getElementById('drill');
@@ -18,6 +18,7 @@
     v.stars = v.stars || {};
     if (v.sound === undefined) v.sound = true;
     v.daily = v.daily || { d: '', n: 0 };
+    v.pick = v.pick || {};
     return v;
   })();
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* 保存できなくても遊べる */ } };
@@ -32,7 +33,7 @@
   const calcStars = (s) => (s >= 10 ? 3 : s >= 8 ? 2 : s >= 5 ? 1 : 0);
   const starsStr = (n) => '★'.repeat(n) + '☆'.repeat(3 - n);
 
-  /* ---------- 音 ---------- */
+  /* ---------- 効果音（ピンポン音だけ。声は出しません） ---------- */
   let ac;
   function beep(freqs) {
     if (!S.sound) return;
@@ -49,15 +50,6 @@
       });
     } catch (e) { /* 音が出なくても続行 */ }
   }
-  function say(text) {
-    if (!S.sound) return;
-    try {
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'ja-JP'; u.rate = 0.8; u.pitch = 1.1;
-      speechSynthesis.speak(u);
-    } catch (e) { /* 読み上げ非対応でも続行 */ }
-  }
 
   /* ---------- 画面の骨組み ---------- */
   root.innerHTML =
@@ -69,7 +61,7 @@
   function paintToday() { document.getElementById('today').textContent = 'きょう ' + todayN() + 'もん'; }
   function paintSnd() {
     const b = document.getElementById('snd');
-    b.textContent = S.sound ? '🔊 おと あり' : '🔇 おと なし';
+    b.textContent = S.sound ? '🔊 こうかおん あり' : '🔇 こうかおん なし';
     b.setAttribute('aria-pressed', S.sound ? 'true' : 'false');
   }
   paintToday(); paintSnd();
@@ -77,6 +69,9 @@
   let G = { playing: false };
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const tone = (n, msg, cls) => { const m = document.getElementById(n); if (m) { m.textContent = msg; m.className = 'msg ' + (cls || ''); } };
+  const toneHTML = (n, html, cls) => { const m = document.getElementById(n); if (m) { m.innerHTML = html; m.className = 'msg ' + (cls || ''); } };
+  const conv = (s) => (W && W.script === 'kata' ? KD.toKata(s) : s);
+  const scriptName = () => (W && W.script === 'kata' ? 'カタカナ' : 'ひらがな');
   function dotsBar() {
     let h = '<ol class="prog" aria-label="しんちょく">';
     for (let i = 0; i < 10; i++) h += '<li class="' + (i < G.idx ? (G.res[i] ? 'ok' : 'ng') : i === G.idx ? 'now' : '') + '"></li>';
@@ -92,7 +87,16 @@
     G = { playing: false };
     const total = C.levels.length * 3;
     let got = 0; C.levels.forEach((_, i) => { got += starsOf(i); });
-    let h = '<p class="pick">レベルを えらんでね<span class="total">★ ' + got + ' / ' + total + '</span></p><div class="levels">';
+    let h = '';
+    if (!isMath) {
+      h += '<p class="pick">はじめかたを えらんでね</p>' +
+        '<button type="button" class="pick-card" data-act="pickmenu"><span class="pk-big" lang="ja">' + conv('あ') + '</span>' +
+        '<span><b>もじを えらんで れんしゅう</b><small>1もじだけでも できるよ</small></span></button>' +
+        '<p class="pick">ことばを よめる ひとは こちら<span class="total">★ ' + got + ' / ' + total + '</span></p>';
+    } else {
+      h += '<p class="pick">レベルを えらんでね<span class="total">★ ' + got + ' / ' + total + '</span></p>';
+    }
+    h += '<div class="levels">';
     C.levels.forEach((l, i) => {
       h += '<div class="level"><button type="button" class="level-main" data-act="play" data-i="' + i + '">' +
         '<span class="lv-no">' + (i + 1) + '</span>' +
@@ -102,7 +106,7 @@
       h += '</div>';
     });
     h += '</div>';
-    if (!isMath) h += '<button type="button" class="chart-card" data-act="chart"><b>' + (W.script === 'kata' ? 'カタカナひょう' : 'ひらがなひょう') + '</b><small>おして おとを きいてみよう・プリントもできるよ</small></button>';
+    if (!isMath) h += '<button type="button" class="chart-card" data-act="chart"><b>' + scriptName() + 'ひょう</b><small>おすと ことばが でるよ。プリントもできるよ</small></button>';
     V.innerHTML = h;
   }
 
@@ -119,7 +123,8 @@
     }
     let sp = '';
     for (let a = 0; a < 4 * Math.PI; a += 0.3) sp += (sp ? ' L' : 'M') + pt(3 + a * 2.1, a - 1.2);
-    const ring = 'M' + pt(n === 3 ? 28 : 38, 0) + ' A' + (n === 3 ? 28 : 38) + ' ' + (n === 3 ? 28 : 38) + ' 0 1 1 ' + pt(n === 3 ? 28 : 38, Math.PI) + ' A' + (n === 3 ? 28 : 38) + ' ' + (n === 3 ? 28 : 38) + ' 0 1 1 ' + pt(n === 3 ? 28 : 38, 0);
+    const rr = n === 3 ? 28 : 38;
+    const ring = 'M' + pt(rr, 0) + ' A' + rr + ' ' + rr + ' 0 1 1 ' + pt(rr, Math.PI) + ' A' + rr + ' ' + rr + ' 0 1 1 ' + pt(rr, 0);
     return '<svg class="mark" viewBox="0 0 120 120" role="img" aria-label="' + (n === 3 ? 'はなまる' : 'まる') + '">' +
       (n === 3 ? '<path class="stroke s1" pathLength="1" d="' + petals + '"/><path class="stroke s2" pathLength="1" d="' + sp + '"/>' : '<path class="stroke s1" pathLength="1" d="' + ring + '"/>' + (n === 2 ? '<path class="stroke s2" pathLength="1" d="' + sp + '"/>' : '')) +
       '</svg>';
@@ -193,10 +198,11 @@
   function nextQ() {
     if (!G.playing) return;
     G.idx++; G.misses = 0; G.input = ''; G.locked = false;
+    if (G.mode === 'pick') { if (G.idx >= 10) pickResult(); else pickQ(); return; }
     if (G.idx >= 10) result(); else (isMath ? mathQ() : wordQ());
   }
 
-  /* ---------- ことば ---------- */
+  /* ---------- ことば（絵あわせ） ---------- */
   function wordStart(i) {
     const L = C.levels[i];
     G = { playing: true, lvl: i, qs: KD.wordQs(C.words, L.filter, 10), idx: 0, score: 0, misses: 0, locked: false, res: [] };
@@ -208,7 +214,6 @@
     q.choices.forEach((c, i) => { ch += '<button type="button" class="choice" id="c' + i + '" data-act="pick" data-i="' + i + '">' + c.e + '</button>'; });
     V.innerHTML = topbar() + dotsBar() +
       '<div class="note word-note" id="qcard"><div class="word" lang="ja">' + q.w + '</div>' +
-      '<button type="button" class="speak" data-act="say" data-t="' + esc(q.w) + '">きいてみる</button>' +
       '<p class="msg" id="kmsg" role="status">あう えは どれかな？</p></div><div class="choices">' + ch + '</div>';
   }
   function wordPick(i) {
@@ -218,29 +223,124 @@
       G.locked = true; G.res[G.idx] = true; if (G.misses === 0) G.score++;
       b.classList.add('ok');
       tone('kmsg', 'せいかい！「' + q.w + '」', 'good'); beep([660, 880, 1100]); bump();
-      setTimeout(() => say(q.w), 450); setTimeout(nextQ, 1700);
+      setTimeout(nextQ, 1700);
     } else {
       G.misses++; b.classList.add('ng'); b.disabled = true; shake();
       tone('kmsg', 'ちがうよ。もういちど', 'bad'); beep([220, 170]);
     }
   }
 
-  /* ---------- 文字表 ---------- */
-  const conv = (s) => (W && W.script === 'kata' ? KD.toKata(s) : s);
+  /* ---------- もじを えらんで れんしゅう（1もじからOK） ---------- */
+  const PICKTABS = ['seion', 'dakuon'];
+  const PICKCHARS = {};
+  PICKTABS.forEach((k) => { PICKCHARS[k] = [].concat.apply([], KD.CHARTS[k].rows).filter(Boolean).map(conv); });
+  const ALLPICK = PICKCHARS.seion.concat(PICKCHARS.dakuon);
+  const sel = new Set(((S.pick[kind]) || []).filter((c) => ALLPICK.indexOf(c) >= 0));
+  function paintSel() {
+    const cnt = document.getElementById('selcnt'); if (cnt) cnt.textContent = sel.size + ' もじ えらんだ';
+    const st = document.getElementById('pstart'); if (st) st.disabled = sel.size === 0;
+  }
+  function pickMenu(tab) {
+    tab = tab || (G && G.tab) || 'seion';
+    G = { playing: false, tab: tab };
+    let h = '<div class="bar"><button type="button" class="back" data-act="menu">もどる</button><span class="lvl">もじを えらぶ</span><span class="cnt" id="selcnt"></span></div>' +
+      '<p class="pick-lead">れんしゅうしたい もじを おして えらぼう。<b>1つだけでも だいじょうぶ。</b></p><div class="ctabs" role="tablist">';
+    PICKTABS.forEach((k) => {
+      h += '<button type="button" role="tab" aria-selected="' + (k === tab) + '" class="' + (k === tab ? 'on' : '') + '" data-act="ptab" data-t="' + k + '">' + KD.CHARTS[k].name + '</button>';
+    });
+    h += '</div><div class="chart cols' + KD.CHARTS[tab].cols + '">';
+    KD.CHARTS[tab].rows.forEach((r) => r.forEach((c0) => {
+      const c = conv(c0);
+      h += c0 ? '<button type="button" class="ch pk' + (sel.has(c) ? ' on' : '') + '" lang="ja" aria-pressed="' + sel.has(c) + '" data-act="ptoggle" data-c="' + c + '">' + c + '</button>' : '<span class="ch blank"></span>';
+    }));
+    h += '</div><div class="picker-actions"><button type="button" class="btn go" id="pstart" data-act="pstart">えらんだ もじで はじめる</button>' +
+      '<button type="button" class="btn sub" data-act="pclear">ぜんぶ はずす</button></div>' +
+      '<p class="chart-note">よみかたは、おうちのかたが こえに だして おしえてあげてね。</p>';
+    V.innerHTML = h;
+    paintSel();
+  }
+  function pickToggle(b) {
+    const c = b.dataset.c;
+    if (sel.has(c)) { sel.delete(c); b.classList.remove('on'); b.setAttribute('aria-pressed', 'false'); }
+    else { sel.add(c); b.classList.add('on'); b.setAttribute('aria-pressed', 'true'); }
+    paintSel();
+  }
+  function pickStart() {
+    if (!sel.size) return;
+    S.pick[kind] = Array.from(sel); save();
+    G = { playing: true, mode: 'pick', tab: G.tab || 'seion', qs: KD.pickQs(C.words, Array.from(sel), ALLPICK, 10), idx: 0, score: 0, misses: 0, locked: false, res: [] };
+    pickQ();
+  }
+  function pickQ() {
+    const q = G.qs[G.idx];
+    let ch = '', ask;
+    if (q.type === 'A') {
+      ask = 'おなじ もじは どれかな？';
+      q.choices.forEach((c, i) => { ch += '<button type="button" class="choice charc" lang="ja" id="c' + i + '" data-act="ppick" data-i="' + i + '">' + c + '</button>'; });
+    } else {
+      ask = '「' + q.c + '」から はじまる ことばは どれかな？';
+      q.choices.forEach((c, i) => { ch += '<button type="button" class="choice" id="c' + i + '" data-act="ppick" data-i="' + i + '">' + c.e + '</button>'; });
+    }
+    V.innerHTML = '<div class="bar"><button type="button" class="back" data-act="pickmenu">もどる</button><span class="lvl">もじの れんしゅう</span><span class="cnt">' + (G.idx + 1) + ' / 10</span></div>' +
+      dotsBar() +
+      '<div class="note pick-note" id="qcard"><p class="ask">' + ask + '</p><div class="bigc" lang="ja">' + q.c + '</div>' +
+      '<p class="msg" id="kmsg" role="status"></p></div><div class="choices">' + ch + '</div>';
+  }
+  function pickPick(i) {
+    if (!G.playing || G.locked) return;
+    const q = G.qs[G.idx], c = q.choices[i], b = document.getElementById('c' + i);
+    const right = q.type === 'A' ? c === q.c : c.w === q.w;
+    if (right) {
+      G.locked = true; G.res[G.idx] = true; if (G.misses === 0) G.score++;
+      b.classList.add('ok');
+      if (q.type === 'B') toneHTML('kmsg', 'せいかい！ <span class="wd" lang="ja"><span class="hl">' + q.c + '</span>' + esc(q.w.slice(q.c.length)) + '</span>', 'good');
+      else tone('kmsg', 'せいかい！', 'good');
+      beep([660, 880, 1100]); bump();
+      setTimeout(nextQ, q.type === 'B' ? 2000 : 1100);
+    } else {
+      G.misses++; b.classList.add('ng'); b.disabled = true; shake();
+      tone('kmsg', 'ちがうよ。もういちど', 'bad'); beep([220, 170]);
+    }
+  }
+  function pickResult() {
+    const n = calcStars(G.score);
+    const text = n === 3 ? 'ぜんぶ よくできました！' : n === 2 ? 'よくできました！' : 'いいちょうし。もういちど あそんでみよう。';
+    V.innerHTML = '<div class="result">' + mark(n) + '<h3>' + G.score + ' / 10 もん せいかい</h3><p>' + text + '</p>' +
+      '<div class="actions"><button type="button" class="btn go" data-act="pickagain">もういちど</button>' +
+      '<button type="button" class="btn sub" data-act="pickmenu">もじを えらびなおす</button>' +
+      '<button type="button" class="btn sub" data-act="menu">はじめに もどる</button></div></div>';
+    beep(n >= 2 ? [660, 880, 1100, 1320] : [660, 880]);
+    G.playing = false;
+  }
+
+  /* ---------- 文字表（おすと、その文字で はじまることばが 絵つきで出ます） ---------- */
   function chartView(tab) {
     tab = tab || 'seion';
     G = { playing: false, tab: tab };
     const t = KD.CHARTS[tab];
-    let h = '<div class="bar"><button type="button" class="back" data-act="menu">もどる</button><span class="lvl">' + (W.script === 'kata' ? 'カタカナひょう' : 'ひらがなひょう') + '</span>' +
+    let h = '<div class="bar"><button type="button" class="back" data-act="menu">もどる</button><span class="lvl">' + scriptName() + 'ひょう</span>' +
       '<button type="button" class="back" data-act="cprint">プリント</button></div><div class="ctabs" role="tablist">';
     Object.keys(KD.CHARTS).forEach((k) => {
       h += '<button type="button" role="tab" aria-selected="' + (k === tab) + '" class="' + (k === tab ? 'on' : '') + '" data-act="ctab" data-t="' + k + '">' + KD.CHARTS[k].name + '</button>';
     });
     h += '</div><div class="chart cols' + t.cols + '">';
     t.rows.forEach((r) => r.forEach((c) => {
-      h += c ? '<button type="button" class="ch" data-act="chsay" data-t="' + conv(c) + '">' + conv(c) + '</button>' : '<span class="ch blank"></span>';
+      h += c ? '<button type="button" class="ch" lang="ja" data-act="chshow" data-t="' + conv(c) + '">' + conv(c) + '</button>' : '<span class="ch blank"></span>';
     }));
-    V.innerHTML = h + '</div><p class="chart-note">おして みよう。こえが きこえるよ。</p>';
+    V.innerHTML = h + '</div><div class="detail" id="chdetail" aria-live="polite">もじを おしてみよう。その もじで はじまる ことばが でるよ。</div>';
+  }
+  function chShow(b) {
+    const c = b.dataset.t;
+    root.querySelectorAll('.ch.hit').forEach((x) => x.classList.remove('hit'));
+    b.classList.add('hit');
+    const ex = KD.examples(C.words, c, 2);
+    let h = '<span class="dc" lang="ja">' + c + '</span>';
+    if (ex.length) {
+      h += ex.map((w) => '<span class="dw"><span class="de">' + w.e + '</span><span lang="ja"><span class="hl">' + c + '</span>' + esc(w.w.slice(c.length)) + '</span></span>').join('');
+    } else {
+      h += '<span class="dn">この もじで はじまる ことばは まだ ないよ</span>';
+    }
+    const d = document.getElementById('chdetail'); if (d) d.innerHTML = h;
   }
 
   /* ---------- 印刷 ---------- */
@@ -269,7 +369,7 @@
     let h = '';
     Object.keys(KD.CHARTS).forEach((k, n) => {
       const t = KD.CHARTS[k];
-      h += '<section class="ps' + (n ? ' pb' : '') + '"><h1>' + (W.script === 'kata' ? 'カタカナ' : 'ひらがな') + 'ひょう　' + t.name + '</h1><div class="ps-chart cols' + t.cols + '">';
+      h += '<section class="ps' + (n ? ' pb' : '') + '"><h1>' + scriptName() + 'ひょう　' + t.name + '</h1><div class="ps-chart cols' + t.cols + '">';
       t.rows.forEach((r) => r.forEach((c) => { h += '<span class="' + (c ? '' : 'blank') + '">' + conv(c) + '</span>'; }));
       h += '</div>' + siteLine() + '</section>';
     });
@@ -286,18 +386,19 @@
     else if (act === 'hint') mathHint();
     else if (act === 'print') printMath(i);
     else if (act === 'pick') wordPick(i);
-    else if (act === 'say') say(b.dataset.t);
     else if (act === 'chart') chartView('seion');
     else if (act === 'ctab') chartView(b.dataset.t);
     else if (act === 'cprint') printChart();
-    else if (act === 'chsay') {
-      root.querySelectorAll('.ch.hit').forEach((x) => x.classList.remove('hit'));
-      b.classList.add('hit'); say(b.dataset.t);
-    }
+    else if (act === 'chshow') chShow(b);
+    else if (act === 'pickmenu') pickMenu();
+    else if (act === 'ptab') pickMenu(b.dataset.t);
+    else if (act === 'ptoggle') pickToggle(b);
+    else if (act === 'pclear') { sel.clear(); pickMenu(G.tab); }
+    else if (act === 'pstart' || act === 'pickagain') pickStart();
+    else if (act === 'ppick') pickPick(i);
   });
   document.getElementById('snd').addEventListener('click', () => {
     S.sound = !S.sound; save(); paintSnd();
-    if (!S.sound) { try { speechSynthesis.cancel(); } catch (e) { /* 何もしない */ } }
   });
   document.addEventListener('keydown', (e) => {
     if (!isMath || !G.playing || e.ctrlKey || e.metaKey || e.altKey) return;

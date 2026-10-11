@@ -96,7 +96,13 @@ var KD = (function () {
     { w: 'ひこうき', e: '✈️' }, { w: 'でんしゃ', e: '🚃' }, { w: 'おにぎり', e: '🍙' }, { w: 'えんぴつ', e: '✏️' }, { w: 'ふうせん', e: '🎈' },
     { w: 'かぼちゃ', e: '🎃' }, { w: 'ひまわり', e: '🌻', g: 'flower' }, { w: 'ちょうちょ', e: '🦋' }, { w: 'じてんしゃ', e: '🚲' },
     { w: 'たいよう', e: '☀️', g: 'sky' }, { w: 'ふくろう', e: '🦉', g: 'bird' }, { w: 'にんじん', e: '🥕' }, { w: 'かたつむり', e: '🐌' },
-    { w: 'てんとうむし', e: '🐞' }, { w: 'ぎゅうにゅう', e: '🥛' }
+    { w: 'てんとうむし', e: '🐞' }, { w: 'ぎゅうにゅう', e: '🥛' },
+    // 頭文字そろえ用
+    { w: 'わに', e: '🐊' }, { w: 'むし', e: '🐛' }, { w: 'しか', e: '🦌' }, { w: 'そば', e: '🍜' }, { w: 'よる', e: '🌃' },
+    { w: 'れもん', e: '🍋' }, { w: 'まいく', e: '🎤' }, { w: 'らくだ', e: '🐪' }, { w: 'ばなな', e: '🍌' }, { w: 'ぷりん', e: '🍮' },
+    { w: 'ろうそく', e: '🕯️' }, { w: 'がっこう', e: '🏫' }, { w: 'どんぐり', e: '🌰' }, { w: 'べんとう', e: '🍱' },
+    { w: 'こいのぼり', e: '🎏' }, { w: 'ぬいぐるみ', e: '🧸' },
+    { w: 'ちず', e: '🗺️' }, { w: 'だんご', e: '🍡' }, { w: 'ぱん', e: '🍞' }, { w: 'ぴあの', e: '🎹' }, { w: 'ぺんぎん', e: '🐧' }, { w: 'ぽすと', e: '📮' }
   ];
   const WORDS_K = [
     // 3もじまで
@@ -153,6 +159,36 @@ var KD = (function () {
     return qs;
   }
 
+  /* ---------- もじ練習（1もじからOK） ---------- */
+  const SMALL = 'ゃゅょャュョ';
+  // ことばの最初の「音」。ちょ・きゃ のような拗音は2文字で1つにする
+  const firstUnit = (w) => (w.length > 1 && SMALL.indexOf(w[1]) >= 0 ? w.slice(0, 2) : w[0]);
+  function examples(words, c, n) {
+    return shuffle(words.filter((w) => firstUnit(w.w) === c)).slice(0, n);
+  }
+  // chars: えらんだもじ（wordsと同じ文字種）, pool: ひっかけに使う全もじ
+  // 奇数番目は「その文字ではじまることば」(あれば)、それ以外は「同じ文字さがし」
+  function pickQs(words, chars, pool, n) {
+    const m = {};
+    words.forEach((w) => { const u = firstUnit(w.w); (m[u] = m[u] || []).push(w); });
+    let bag = [];
+    const next = () => { if (!bag.length) bag = shuffle(chars); return bag.pop(); };
+    const qs = [];
+    for (let i = 0; i < n; i++) {
+      const c = next();
+      const cand = m[c] || [];
+      if (i % 2 === 1 && cand.length) {
+        const w = cand[rnd(0, cand.length - 1)];
+        const ds = shuffle(words.filter((d) => firstUnit(d.w) !== c && d.e !== w.e)).slice(0, 3);
+        qs.push({ type: 'B', c, w: w.w, e: w.e, choices: shuffle([w].concat(ds)) });
+      } else {
+        const ds = shuffle(pool.filter((x) => x !== c)).slice(0, 3);
+        qs.push({ type: 'A', c, choices: shuffle([c].concat(ds)) });
+      }
+    }
+    return qs;
+  }
+
   /* ---------- 文字表 ---------- */
   const CHARTS = {
     seion: { name: 'せいおん', cols: 5, rows: [
@@ -168,6 +204,6 @@ var KD = (function () {
   };
   const toKata = (s) => s.replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60));
 
-  return { rnd, shuffle, MATH, WORD, WORDS_H, WORDS_K, CHARTS, toKata, wordQs, mathQs };
+  return { rnd, shuffle, MATH, WORD, WORDS_H, WORDS_K, CHARTS, toKata, wordQs, mathQs, firstUnit, examples, pickQs };
 })();
 if (typeof module !== 'undefined') module.exports = KD;
