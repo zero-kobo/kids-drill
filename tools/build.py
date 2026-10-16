@@ -13,7 +13,7 @@ UPDATED = "2026-10-10"
 # 決まったら例のように入れて、python3 build.py を実行してください。
 # 例：'<a href="https://note.com/…" target="_blank" rel="noopener noreferrer">noteの記事のコメント欄</a>へお願いします。個人情報は書かないでください。'
 CONTACT_HTML = '<a href="https://note.com/zero_kobo/n/nbaeaaa99bd82" target="_blank" rel="noopener noreferrer">noteの記事のコメント欄</a>へお願いします。個人情報は書かないでください。'
-VER = "20261012a"
+VER = "20261016a"
 # Googleアナリティクス(GA4)の測定ID。空にすると、タグは出力されません。
 GA_ID = "G-40QSGNSQEL"
 # =======================

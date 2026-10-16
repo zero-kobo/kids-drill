@@ -34,6 +34,12 @@ window.SITE_ADS = {
      例：
      { title: 'こどもちゃれんじ', desc: '年齢に合わせた教材が毎月届きます。', url: 'https://…', tag: '幼児〜小学生' }, */
   recs: [
+    { title: 'Z会の通信教育（幼児向け）', desc: '考え抜かれた教材で学べる通信教育。幼児向けの資料請求ができます。', tag: '幼児〜',
+      url: 'https://px.a8.net/svt/ejp?a8mat=4BEE15+2J3G6Y+E0Q+CTW36',
+      pixel: 'https://www16.a8.net/0.gif?a8mat=4BEE15+2J3G6Y+E0Q+CTW36' },
+    { title: 'Z会の通信教育（小学生以上）', desc: '小学生から高校生まで学べる通信教育。公式サイトで、コースを確認できます。', tag: '小学生〜',
+      url: 'https://px.a8.net/svt/ejp?a8mat=4BEE15+2J3G6Y+E0Q+CTGNM',
+      pixel: 'https://www13.a8.net/0.gif?a8mat=4BEE15+2J3G6Y+E0Q+CTGNM' }
   ]
 };
 
@@ -90,7 +96,7 @@ window.SITE_ADS = {
           a.className = 'rec';
           a.href = r.url;
           a.target = '_blank';
-          a.rel = 'sponsored noopener noreferrer';
+          a.rel = 'nofollow sponsored noopener';
           var tag = document.createElement('span'); tag.className = 'rec-tag'; tag.textContent = r.tag || '';
           var ti = document.createElement('b'); ti.textContent = r.title || '';
           var de = document.createElement('span'); de.className = 'rec-desc'; de.textContent = r.desc || '';
@@ -98,6 +104,12 @@ window.SITE_ADS = {
           if (r.tag) a.appendChild(tag);
           a.appendChild(ti); a.appendChild(de); a.appendChild(go);
           box.appendChild(a);
+          if (r.pixel) {
+            var px = document.createElement('img');
+            px.src = r.pixel; px.width = 1; px.height = 1; px.alt = ''; px.border = 0;
+            px.style.cssText = 'width:1px;height:1px;position:absolute;opacity:0';
+            box.appendChild(px);
+          }
         });
       } else if (A.showPlaceholder) {
         box.innerHTML = '<div class="ad-ph">ここに おすすめ教材のカードが入ります<br><small>assets/ads.js の recs に追加してください</small></div>';

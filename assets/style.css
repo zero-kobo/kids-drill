@@ -313,3 +313,5 @@ button{font-family:inherit;font-weight:700;color:inherit;cursor:pointer;-webkit-
 .rk-list table{max-width:100%}
 .rk-list br{display:none}
 .rk-list p:empty{display:none}
+/* おすすめ教材カードのラベル（ステップの「つぎは ここ」印と別物） */
+.recs .rec-tag{position:static;top:auto;right:auto;background:none;border:0;border-radius:0;padding:0;font-size:.75rem;font-weight:700;color:var(--accent);line-height:1.5}
