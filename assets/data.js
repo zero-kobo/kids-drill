@@ -52,6 +52,41 @@ var KD = (function () {
       'あわせて <b>' + ans + '</b></p>';
   }
 
+  /* ---------- 九九 ---------- */
+  const KUKU = [
+    ['いんいちが いち', 'いんにが に', 'いんさんが さん', 'いんしが し', 'いんごが ご', 'いんろくが ろく', 'いんしちが しち', 'いんはちが はち', 'いんくが く'],
+    ['にいちが に', 'ににんが し', 'にさんが ろく', 'にしが はち', 'にご じゅう', 'にろく じゅうに', 'にしち じゅうし', 'にはち じゅうろく', 'にく じゅうはち'],
+    ['さんいちが さん', 'さんにが ろく', 'さざんが く', 'さんし じゅうに', 'さんご じゅうご', 'さぶろく じゅうはち', 'さんしち にじゅういち', 'さんぱ にじゅうし', 'さんく にじゅうしち'],
+    ['しいちが し', 'しにが はち', 'しさん じゅうに', 'しし じゅうろく', 'しご にじゅう', 'しろく にじゅうし', 'ししち にじゅうはち', 'しは さんじゅうに', 'しく さんじゅうろく'],
+    ['ごいちが ご', 'ごに じゅう', 'ごさん じゅうご', 'ごし にじゅう', 'ごご にじゅうご', 'ごろく さんじゅう', 'ごしち さんじゅうご', 'ごは しじゅう', 'ごっく しじゅうご'],
+    ['ろくいちが ろく', 'ろくに じゅうに', 'ろくさん じゅうはち', 'ろくし にじゅうし', 'ろくご さんじゅう', 'ろくろく さんじゅうろく', 'ろくしち しじゅうに', 'ろくは しじゅうはち', 'ろっく ごじゅうし'],
+    ['しちいちが しち', 'しちに じゅうし', 'しちさん にじゅういち', 'しちし にじゅうはち', 'しちご さんじゅうご', 'しちろく しじゅうに', 'しちしち しじゅうく', 'しちは ごじゅうろく', 'しちく ろくじゅうさん'],
+    ['はちいちが はち', 'はちに じゅうろく', 'はちさん にじゅうし', 'はちし さんじゅうに', 'はちご しじゅう', 'はちろく しじゅうはち', 'はちしち ごじゅうろく', 'はっぱ ろくじゅうし', 'はっく しちじゅうに'],
+    ['くいちが く', 'くに じゅうはち', 'くさん にじゅうしち', 'くし さんじゅうろく', 'くご しじゅうご', 'くろく ごじゅうし', 'くしち ろくじゅうさん', 'くは しちじゅうに', 'くく はちじゅういち']
+  ];
+  function hintMul(q) {
+    const a = q.a, b = q.b, ans = a * b;
+    let add = '';
+    for (let i = 0; i < b; i++) add += (i ? ' ＋ ' : '') + a;
+    let h = '<p>「' + KUKU[a - 1][b - 1] + '」</p>';
+    h += '<p>' + a + 'が ' + b + 'こ ぶん。<br>' + (b > 1 ? add + ' ＝ <b>' + ans + '</b>' : a + 'が 1こ だから <b>' + ans + '</b>') + '</p>';
+    if (b > 1) h += '<p>' + a + ' × ' + (b - 1) + ' ＝ ' + (a * (b - 1)) + ' に、' + a + 'を たしても いいよ。</p>';
+    return h;
+  }
+  const dan = (d) => () => ({ a: d, b: rnd(1, 9) });
+  const mulLevels = [
+    { name: '5のだん', sub: '5とびで ふえるよ（5×3）', grade: '小2・はじめに', gen: dan(5) },
+    { name: '2のだん', sub: '2とびで ふえるよ（2×7）', grade: '小2', gen: dan(2) },
+    { name: '3のだん', sub: '（3×6、3×8）', grade: '小2', gen: dan(3) },
+    { name: '4のだん', sub: '（4×7、4×9）', grade: '小2', gen: dan(4) },
+    { name: '6のだん', sub: '（6×7、6×8）', grade: '小2', gen: dan(6) },
+    { name: '7のだん', sub: 'いちばん むずかしい だん（7×8）', grade: '小2', gen: dan(7) },
+    { name: '8のだん', sub: '（8×6、8×7）', grade: '小2', gen: dan(8) },
+    { name: '9のだん', sub: '（9×6、9×9）', grade: '小2', gen: dan(9) },
+    { name: '1のだん', sub: 'かけても かわらないよ（1×8）', grade: '小2', gen: dan(1) },
+    { name: 'ぜんぶ ミックス', sub: '1〜9のだんが ばらばらに でるよ', grade: 'しあげ', gen: () => ({ a: rnd(1, 9), b: rnd(1, 9) }) }
+  ];
+
   /* ---------- たしざん・ひきざん ---------- */
   const sumLevels = [
     { name: 'ひとけた ＋ ひとけた', sub: 'こたえが 9まで（3＋4）', grade: '年長〜小1', gen: () => { const a = rnd(1, 8); return { a, b: rnd(1, 9 - a) }; } },
@@ -69,7 +104,8 @@ var KD = (function () {
   ];
   const MATH = {
     sum: { key: 'sum', title: 'たしざん', op: '＋', fn: (a, b) => a + b, hint: hintSum, levels: sumLevels },
-    sub: { key: 'sub', title: 'ひきざん', op: '−', fn: (a, b) => a - b, hint: hintSub, levels: subLevels }
+    sub: { key: 'sub', title: 'ひきざん', op: '−', fn: (a, b) => a - b, hint: hintSub, levels: subLevels },
+    mul: { key: 'mul', title: '九九', op: '×', fn: (a, b) => a * b, hint: hintMul, levels: mulLevels }
   };
 
   /* ---------- ことば（絵あわせ） ---------- */
@@ -161,6 +197,13 @@ var KD = (function () {
       if (seen.has(k)) continue;
       seen.add(k); qs.push(q);
     }
+    /* 問題のしゅるいが n より少ないとき（九九の1つのだん など）は、くりかえしで うめる */
+    let prev = qs.length ? qs[qs.length - 1] : null, g2 = 0;
+    while (qs.length < n && g2++ < 3000) {
+      const q = gen();
+      if (prev && q.a === prev.a && q.b === prev.b) continue;
+      qs.push(q); prev = q;
+    }
     return qs;
   }
 
@@ -226,6 +269,6 @@ var KD = (function () {
   };
   const toKata = (s) => s.replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60));
 
-  return { rnd, shuffle, MATH, WORD, WORDS_H, WORDS_K, CHARTS, toKata, wordQs, mathQs, firstUnit, examples, stepQs, steps };
+  return { rnd, shuffle, KUKU, MATH, WORD, WORDS_H, WORDS_K, CHARTS, toKata, wordQs, mathQs, firstUnit, examples, stepQs, steps };
 })();
 if (typeof module !== 'undefined') module.exports = KD;

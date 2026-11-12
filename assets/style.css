@@ -9,6 +9,7 @@
 }
 body.p-sum{--accent:#2f6fb5;--accent-soft:#e1ecf9}
 body.p-sub{--accent:#d6382f;--accent-soft:#fde7e5}
+body.p-mul{--accent:#c2620e;--accent-soft:#fdeedd}
 body.p-kana{--accent:#1a7c52;--accent-soft:#dcf1e6}
 body.p-kata{--accent:#6a4cc0;--accent-soft:#ebe5fa}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -40,7 +41,7 @@ button{font-family:inherit;font-weight:700;color:inherit;cursor:pointer;-webkit-
   padding:11px 14px 10px;border:2px solid var(--ink);border-bottom:0;border-radius:12px 12px 0 0;background:var(--tc,#fff);
 }
 .tabs-nav a[aria-current="page"]{padding-bottom:13px;background:var(--ink);color:#fff}
-.tabs-nav .t-home{--tc:#fff4c2}.tabs-nav .t-sum{--tc:#e1ecf9}.tabs-nav .t-sub{--tc:#fde7e5}.tabs-nav .t-kana{--tc:#dcf1e6}.tabs-nav .t-kata{--tc:#ebe5fa}
+.tabs-nav .t-home{--tc:#fff4c2}.tabs-nav .t-sum{--tc:#e1ecf9}.tabs-nav .t-sub{--tc:#fde7e5}.tabs-nav .t-mul{--tc:#fdeedd}.tabs-nav .t-kana{--tc:#dcf1e6}.tabs-nav .t-kata{--tc:#ebe5fa}
 
 /* ---------- ヒーロー＋ドリル ---------- */
 .crumb{font-size:.85rem;color:var(--sub);margin:16px 0 0;line-height:1.5}
@@ -315,3 +316,13 @@ button{font-family:inherit;font-weight:700;color:inherit;cursor:pointer;-webkit-
 .rk-list p:empty{display:none}
 /* おすすめ教材カードのラベル（ステップの「つぎは ここ」印と別物） */
 .recs .rec-tag{position:static;top:auto;right:auto;background:none;border:0;border-radius:0;padding:0;font-size:.75rem;font-weight:700;color:var(--accent);line-height:1.5}
+
+/* 九九表 */
+.kuku-wrap{overflow-x:auto}
+.kuku{border-collapse:collapse;width:100%;min-width:300px;font-family:var(--ff-kyo);font-weight:600;text-align:center;font-size:.95rem}
+.kuku th,.kuku td{border:1.5px solid var(--line);padding:5px 0;width:10%}
+.kuku th{background:var(--accent-soft);color:var(--accent)}
+.kuku td.sq{background:#fff6d6}
+.yomi{columns:2;column-gap:18px;list-style:none;padding:0;margin:.4em 0;font-size:.92rem}
+.yomi li{break-inside:avoid;padding:2px 0}
+.yomi b{font-family:var(--ff-kyo);display:inline-block;min-width:4.6em}
