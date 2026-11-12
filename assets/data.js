@@ -87,6 +87,59 @@ var KD = (function () {
     { name: 'ぜんぶ ミックス', sub: '1〜9のだんが ばらばらに でるよ', grade: 'しあげ', gen: () => ({ a: rnd(1, 9), b: rnd(1, 9) }) }
   ];
 
+  /* ---------- とけい ---------- */
+  const fun = (m) => ([1, 3, 4, 6, 8, 0].indexOf(m % 10) >= 0 ? 'ぷん' : 'ふん');
+  const timeText = (h, m, half) => (m === 0 ? h + 'じ' : (half && m === 30 ? h + 'じはん' : h + 'じ ' + m + fun(m)));
+  function clockSVG(h, m) {
+    const pt = (deg, r) => { const t = (deg - 90) * Math.PI / 180; return [(100 + r * Math.cos(t)).toFixed(1), (100 + r * Math.sin(t)).toFixed(1)]; };
+    let g = '';
+    for (let i = 0; i < 60; i++) {
+      const big = i % 5 === 0, p1 = pt(i * 6, big ? 80 : 84), p2 = pt(i * 6, 89);
+      g += '<line x1="' + p1[0] + '" y1="' + p1[1] + '" x2="' + p2[0] + '" y2="' + p2[1] + '" stroke="#1c2830" stroke-width="' + (big ? 2.4 : 1) + '"/>';
+    }
+    for (let n = 1; n <= 12; n++) { const p = pt(n * 30, 67); g += '<text x="' + p[0] + '" y="' + p[1] + '" text-anchor="middle" dominant-baseline="central" font-size="19" font-weight="700" fill="#1c2830">' + n + '</text>'; }
+    const hh = pt((h % 12) * 30 + m * 0.5, 44), mm = pt(m * 6, 76);
+    return '<svg class="clock" viewBox="0 0 200 200" role="img" aria-label="とけい"><circle cx="100" cy="100" r="94" fill="#fff" stroke="#1c2830" stroke-width="5"/>' + g +
+      '<line x1="100" y1="100" x2="' + mm[0] + '" y2="' + mm[1] + '" stroke="#2f6fb5" stroke-width="5" stroke-linecap="round"/>' +
+      '<line x1="100" y1="100" x2="' + hh[0] + '" y2="' + hh[1] + '" stroke="#d6382f" stroke-width="8" stroke-linecap="round"/>' +
+      '<circle cx="100" cy="100" r="6" fill="#1c2830"/></svg>';
+  }
+  function hintClock(q) {
+    const h = q.a, m = q.b, nx = h % 12 + 1, n5 = Math.floor(m / 5), r = m % 5;
+    let s = '<p><b style="color:#d6382f">みじかい はり</b>で「なんじ」を よむよ。<br>' +
+      (m === 0 ? h + 'を さしているね。' : h + 'と ' + nx + 'の あいだ。まだ ' + nx + 'じに なっていないから、' + h + 'じ。') + '</p><p><b style="color:#2f6fb5">ながい はり</b>で「なんぷん」を よむよ。<br>';
+    if (m === 0) s += '12を さしていたら、「ちょうど」。';
+    else if (m === 30) s += '6を さしていたら、30ぷん。「はん」とも いうよ。';
+    else if (r === 0) s += 'すうじの ' + n5 + 'を さしているね。5とびで かぞえて ' + m + fun(m) + '。';
+    else if (n5 === 0) s += '12から ' + r + 'めもり すすんで ' + m + fun(m) + '。';
+    else s += 'すうじの ' + n5 + 'で ' + (n5 * 5) + fun(n5 * 5) + '。そこから ' + r + 'めもり すすんで ' + m + fun(m) + '。';
+    return s + '</p>';
+  }
+  /* まちがえやすい こたえを 3つ つくる（はりの とりちがえ、1じかんの ずれ、すうじを そのまま よむ） */
+  function clockChoices(q, half) {
+    const h = q.a, m = q.b, H = (x) => ((x - 1 + 12) % 12) + 1, key = (x) => x[0] + ':' + x[1];
+    let c = [];
+    if (m === 0) c = [[H(h + 1), 0], [H(h - 1), 0], [h, 30], [H(h + 6), 0], [H(h + 2), 0]];
+    else if (half && m === 30) c = [[H(h + 1), 30], [h, 0], [H(h + 1), 0], [6, h * 5 % 60], [H(h - 1), 30]];
+    else {
+      const n5 = Math.round(m / 5) % 12;
+      c = [[H(h + 1), m], [H(n5 || 12), (h * 5) % 60], [h, (m + 5) % 60], [h, (m + 55) % 60], [H(h - 1), m], [h, (m + 10) % 60]];
+      if (m % 5 === 0 && n5 > 0) c.splice(2, 0, [h, n5]);
+    }
+    const seen = new Set([key([h, m])]), out = [];
+    shuffle(c.slice(0, 4)).concat(c.slice(4)).forEach((x) => { if (out.length < 3 && !seen.has(key(x))) { seen.add(key(x)); out.push(x); } });
+    let g = 0;
+    while (out.length < 3 && g++ < 50) { const x = [rnd(1, 12), m]; if (!seen.has(key(x))) { seen.add(key(x)); out.push(x); } }
+    return shuffle(out.concat([[h, m]])).map((x) => ({ h: x[0], m: x[1], t: timeText(x[0], x[1], half), ok: x[0] === h && x[1] === m }));
+  }
+  const clockLevels = [
+    { name: 'ちょうど', sub: '3じ、8じ など', grade: '年長〜小1', half: true, gen: () => ({ a: rnd(1, 12), b: 0 }) },
+    { name: 'なんじはん', sub: '3じはん、8じはん など', grade: '小1', half: true, gen: () => ({ a: rnd(1, 12), b: 30 }) },
+    { name: '5ふん きざみ', sub: '3じ 15ふん、8じ 40ぷん など', grade: '小1', gen: () => ({ a: rnd(1, 12), b: rnd(1, 11) * 5 }) },
+    { name: '1ぷん きざみ', sub: '3じ 27ふん、8じ 43ぷん など', grade: '小1〜小2', gen: () => ({ a: rnd(1, 12), b: rnd(1, 59) }) },
+    { name: 'ぜんぶ ミックス', sub: 'レベル1〜4が まざるよ', grade: 'おさらい', gen: () => clockLevels[rnd(0, 3)].gen() }
+  ];
+
   /* ---------- たしざん・ひきざん ---------- */
   const sumLevels = [
     { name: 'ひとけた ＋ ひとけた', sub: 'こたえが 9まで（3＋4）', grade: '年長〜小1', gen: () => { const a = rnd(1, 8); return { a, b: rnd(1, 9 - a) }; } },
@@ -105,7 +158,8 @@ var KD = (function () {
   const MATH = {
     sum: { key: 'sum', title: 'たしざん', op: '＋', fn: (a, b) => a + b, hint: hintSum, levels: sumLevels },
     sub: { key: 'sub', title: 'ひきざん', op: '−', fn: (a, b) => a - b, hint: hintSub, levels: subLevels },
-    mul: { key: 'mul', title: '九九', op: '×', fn: (a, b) => a * b, hint: hintMul, levels: mulLevels }
+    mul: { key: 'mul', title: '九九', op: '×', fn: (a, b) => a * b, hint: hintMul, levels: mulLevels },
+    clock: { key: 'clock', title: 'とけい', clock: true, hint: hintClock, levels: clockLevels }
   };
 
   /* ---------- ことば（絵あわせ） ---------- */
@@ -269,6 +323,6 @@ var KD = (function () {
   };
   const toKata = (s) => s.replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60));
 
-  return { rnd, shuffle, KUKU, MATH, WORD, WORDS_H, WORDS_K, CHARTS, toKata, wordQs, mathQs, firstUnit, examples, stepQs, steps };
+  return { rnd, shuffle, KUKU, clockSVG, clockChoices, timeText, MATH, WORD, WORDS_H, WORDS_K, CHARTS, toKata, wordQs, mathQs, firstUnit, examples, stepQs, steps };
 })();
 if (typeof module !== 'undefined') module.exports = KD;

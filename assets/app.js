@@ -210,7 +210,46 @@
     if (!G.playing) return;
     G.idx++; G.misses = 0; G.input = ''; G.locked = false;
     if (G.mode === 'pick') { if (G.idx >= 10) pickResult(); else pickQ(); return; }
-    if (G.idx >= 10) result(); else (isMath ? mathQ() : wordQ());
+    if (G.idx >= 10) result(); else (isMath ? (C.clock ? clockQ() : mathQ()) : wordQ());
+  }
+
+  /* ---------- とけい（4つから えらぶ） ---------- */
+  function clockStart(i) {
+    const L = C.levels[i];
+    const qs = KD.mathQs(L.gen, 10).map((q) => ({ a: q.a, b: q.b, half: !!L.half && (q.b === 0 || q.b === 30), ch: null }));
+    qs.forEach((q) => { q.ch = KD.clockChoices(q, q.half); });
+    G = { playing: true, lvl: i, qs: qs, idx: 0, score: 0, misses: 0, locked: false, res: [] };
+    clockQ();
+  }
+  function clockQ() {
+    const q = G.qs[G.idx];
+    let ch = '';
+    q.ch.forEach((c, i) => { ch += '<button type="button" class="choice tchoice" id="c' + i + '" data-act="tpick" data-i="' + i + '">' + esc(c.t) + '</button>'; });
+    V.innerHTML = topbar() + dotsBar() +
+      '<div class="note clock-note" id="qcard">' + KD.clockSVG(q.a, q.b) +
+      '<p class="msg" id="kmsg" role="status">なんじ かな？</p><div class="hint" id="hint"></div></div>' +
+      '<div class="choices">' + ch + '</div>' +
+      '<button type="button" class="hintbtn" data-act="hint">ヒントを みる</button>';
+  }
+  function clockPick(i) {
+    if (!G.playing || G.locked) return;
+    const q = G.qs[G.idx], c = q.ch[i], b = document.getElementById('c' + i);
+    if (c.ok) {
+      G.locked = true; G.res[G.idx] = G.misses < 3; if (G.misses === 0) G.score++;
+      b.classList.add('ok');
+      tone('kmsg', 'せいかい！「' + c.t + '」', 'good'); beep([660, 880, 1100]); bump();
+      setTimeout(nextQ, 1500);
+    } else {
+      G.misses++; b.classList.add('ng'); b.disabled = true; shake(); beep([220, 170]);
+      if (G.misses >= 3) {
+        G.locked = true; G.res[G.idx] = false; bump();
+        q.ch.forEach((x, k) => { if (x.ok) { document.getElementById('c' + k).classList.add('ok'); tone('kmsg', 'こたえは「' + x.t + '」だよ。つぎは できるよ。', 'bad'); } });
+        mathHint(); setTimeout(nextQ, 3600);
+      } else {
+        tone('kmsg', 'ちがうよ。もういちど', 'bad');
+        if (G.misses >= 2) mathHint();
+      }
+    }
   }
 
   /* ---------- ことば（絵あわせ） ---------- */
@@ -360,6 +399,18 @@
     printDoc('<section class="ps"><h1>' + C.title + 'ドリル　レベル' + (i + 1) + '　' + esc(L.name) + '</h1>' + head + '<div class="ps-grid">' + q + '</div>' + siteLine() + '</section>' +
       '<section class="ps pb"><h1>こたえ　レベル' + (i + 1) + '</h1><div class="ps-grid">' + a + '</div>' + siteLine() + '</section>');
   }
+  function printClock(i) {
+    const L = C.levels[i], qs = KD.mathQs(L.gen, 8);
+    const head = '<div class="ps-meta">なまえ（　　　　　　　　　　）　　ひづけ（　　　月　　　日）</div>';
+    let q = '', a = '';
+    qs.forEach((x, k) => {
+      const half = !!L.half && (x.b === 0 || x.b === 30);
+      q += '<div class="ps-c"><span class="no">' + (k + 1) + '</span>' + KD.clockSVG(x.a, x.b) + '<div class="ln">（　　　）じ（　　　）ふん</div></div>';
+      a += '<div class="ps-c"><span class="no">' + (k + 1) + '</span>' + KD.clockSVG(x.a, x.b) + '<div class="ln"><b>' + esc(KD.timeText(x.a, x.b, half)) + '</b></div></div>';
+    });
+    printDoc('<section class="ps"><h1>とけいドリル　レベル' + (i + 1) + '　' + esc(L.name) + '</h1>' + head + '<div class="ps-clocks">' + q + '</div>' + siteLine() + '</section>' +
+      '<section class="ps pb"><h1>こたえ　レベル' + (i + 1) + '</h1><div class="ps-clocks">' + a + '</div>' + siteLine() + '</section>');
+  }
   function printChart() {
     let h = '';
     Object.keys(KD.CHARTS).forEach((k, n) => {
@@ -375,11 +426,12 @@
   root.addEventListener('click', (e) => {
     const b = e.target.closest('[data-act]'); if (!b) return;
     const act = b.dataset.act, i = Number(b.dataset.i);
-    if (act === 'play') (isMath ? mathStart(i) : wordStart(i));
+    if (act === 'play') (isMath ? (C.clock ? clockStart(i) : mathStart(i)) : wordStart(i));
     else if (act === 'menu') menu();
     else if (act === 'key') mathKey(b.dataset.k);
     else if (act === 'hint') mathHint();
-    else if (act === 'print') printMath(i);
+    else if (act === 'print') (C.clock ? printClock(i) : printMath(i));
+    else if (act === 'tpick') clockPick(i);
     else if (act === 'pick') wordPick(i);
     else if (act === 'chart') chartView('seion');
     else if (act === 'ctab') chartView(b.dataset.t);
@@ -393,7 +445,7 @@
     S.sound = !S.sound; save(); paintSnd();
   });
   document.addEventListener('keydown', (e) => {
-    if (!isMath || !G.playing || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (!isMath || C.clock || !G.playing || e.ctrlKey || e.metaKey || e.altKey) return;
     if (/^[0-9]$/.test(e.key)) mathKey(e.key);
     else if (e.key === 'Backspace') mathKey('del');
     else if (e.key === 'Enter') mathKey('ok');

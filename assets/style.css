@@ -10,6 +10,7 @@
 body.p-sum{--accent:#2f6fb5;--accent-soft:#e1ecf9}
 body.p-sub{--accent:#d6382f;--accent-soft:#fde7e5}
 body.p-mul{--accent:#c2620e;--accent-soft:#fdeedd}
+body.p-clk{--accent:#b83280;--accent-soft:#fbe6f1}
 body.p-kana{--accent:#1a7c52;--accent-soft:#dcf1e6}
 body.p-kata{--accent:#6a4cc0;--accent-soft:#ebe5fa}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -41,7 +42,7 @@ button{font-family:inherit;font-weight:700;color:inherit;cursor:pointer;-webkit-
   padding:11px 14px 10px;border:2px solid var(--ink);border-bottom:0;border-radius:12px 12px 0 0;background:var(--tc,#fff);
 }
 .tabs-nav a[aria-current="page"]{padding-bottom:13px;background:var(--ink);color:#fff}
-.tabs-nav .t-home{--tc:#fff4c2}.tabs-nav .t-sum{--tc:#e1ecf9}.tabs-nav .t-sub{--tc:#fde7e5}.tabs-nav .t-mul{--tc:#fdeedd}.tabs-nav .t-kana{--tc:#dcf1e6}.tabs-nav .t-kata{--tc:#ebe5fa}
+.tabs-nav .t-home{--tc:#fff4c2}.tabs-nav .t-sum{--tc:#e1ecf9}.tabs-nav .t-sub{--tc:#fde7e5}.tabs-nav .t-mul{--tc:#fdeedd}.tabs-nav .t-clk{--tc:#fbe6f1}.tabs-nav .t-kana{--tc:#dcf1e6}.tabs-nav .t-kata{--tc:#ebe5fa}
 
 /* ---------- ヒーロー＋ドリル ---------- */
 .crumb{font-size:.85rem;color:var(--sub);margin:16px 0 0;line-height:1.5}
@@ -326,3 +327,19 @@ button{font-family:inherit;font-weight:700;color:inherit;cursor:pointer;-webkit-
 .yomi{columns:2;column-gap:18px;list-style:none;padding:0;margin:.4em 0;font-size:.92rem}
 .yomi li{break-inside:avoid;padding:2px 0}
 .yomi b{font-family:var(--ff-kyo);display:inline-block;min-width:4.6em}
+
+/* とけい */
+.clock{display:block;width:min(64vw,230px);height:auto;margin:4px auto 2px}
+.clock text{font-family:var(--ff-kyo)}
+.clock-note{text-align:center}
+.choice.tchoice{font-family:var(--ff-kyo);font-weight:600;font-size:1.3rem;line-height:1.3;padding:16px 4px}
+.art .clock{width:150px;margin:6px auto}
+.clk-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;text-align:center;font-family:var(--ff-kyo);font-weight:600}
+.clk-row figure{margin:0}.clk-row figcaption{font-size:.95rem}
+@media print{
+  .ps-clocks{display:grid;grid-template-columns:1fr 1fr;gap:7mm 10mm}
+  .ps-c{position:relative;text-align:center;font-size:15pt;font-family:var(--ff-kyo);break-inside:avoid}
+  .ps-c .no{position:absolute;left:2mm;top:0;font-size:11pt;font-family:var(--ff);color:#555}
+  .ps-c .clock{width:44mm;height:44mm;margin:0 auto 2mm}
+  .ps-c .ln b{color:#c00}
+}
